@@ -8,42 +8,24 @@ import (
 	"github.com/IBM/sarama"
 )
 
-type KafkaRepository interface {
-	Produce(topic string, message string) error
-	Consume()
-}
-
-type kafkaMessageRepository struct {
-	producer    sarama.AsyncProducer
-	consumer    sarama.ConsumerGroup
-	topics      []string
-	messageChan chan interface{}
-}
-
-type KafkaInstanceDTO struct {
-	Brokers     []string
-	GroupID     string
-	Topics      []string
-	MessageChan chan interface{}
-}
-
-type consumerGroupHandler struct {
-	messageChan chan interface{}
-}
-
 func (cgh *consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
 func (cgh *consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		var message interface{}
-		err := json.Unmarshal(msg.Value, &message)
+		var body KafkaBody
+		err := json.Unmarshal(msg.Value, &body)
 		if err != nil {
 			logger.Error("Failed unmarshalling kafka message ", msg.Value)
 			continue
 		}
 
+		kafkaTopic := KafkaTopic{
+			Topic: msg.Topic,
+			Body:  body,
+		}
+
 		select {
-		case cgh.messageChan <- message:
+		case cgh.messageChan <- kafkaTopic:
 		default:
 			logger.Error("Failed to send message to channel: channel is full")
 		}
