@@ -11,15 +11,15 @@ type kafkaMessageRepository struct {
 	producer    sarama.AsyncProducer
 	consumer    sarama.ConsumerGroup
 	topics      []string
-	messageChan chan KafkaTopic
+	messageChan chan KafkaTopicDTO
 }
 type KafkaInstanceDTO struct {
 	Brokers     []string
 	GroupID     string
 	Topics      []string
-	MessageChan chan KafkaTopic
+	MessageChan chan KafkaTopicDTO
 }
 
 type consumerGroupHandler struct {
-	messageChan chan KafkaTopic
+	messageChan chan KafkaTopicDTO
 }
