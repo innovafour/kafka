@@ -19,7 +19,7 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 			continue
 		}
 
-		kafkaTopic := KafkaTopic{
+		kafkaTopic := KafkaTopicDTO{
 			Topic: msg.Topic,
 			Body:  body,
 		}

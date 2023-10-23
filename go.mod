@@ -1,6 +1,6 @@
 module bitbucket.org/Soytul/library-go-kafka
 
-go 1.21.3
+go 1.20
 
 require (
 	bitbucket.org/Soytul/library-go-logger v0.0.0-20231023204257-c35d77174ccc
