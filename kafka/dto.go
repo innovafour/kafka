@@ -7,12 +7,12 @@ type KafkaBody struct {
 	Body    map[string]interface{} `json:"body,omitempty"`
 }
 
-type KafkaTopic struct {
+type KafkaTopicDTO struct {
 	Topic string    `json:"topic"`
 	Body  KafkaBody `json:"body"`
 }
 
-func (b *KafkaTopic) GetData() map[string]interface{} {
+func (b *KafkaTopicDTO) GetData() map[string]interface{} {
 	if b.Body.Body != nil {
 		return b.Body.Body
 	} else {
@@ -20,7 +20,7 @@ func (b *KafkaTopic) GetData() map[string]interface{} {
 	}
 }
 
-func (b *KafkaTopic) Uuid() string {
+func (b *KafkaTopicDTO) Uuid() string {
 	uuid, ok := b.Body.Data["uuid"].(string)
 	if !ok {
 		uuid, ok = b.Body.Body["uuid"].(string)
