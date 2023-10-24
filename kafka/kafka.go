@@ -90,6 +90,7 @@ func (k *kafkaMessageRepository) Consume() {
 	}
 
 	for {
+		logger.Debug("Subscribing to topics: ", k.topics)
 		err := k.consumer.Consume(context.TODO(), k.topics, handler)
 		if err != nil {
 			logger.Error("Error consuming: %v", err)
