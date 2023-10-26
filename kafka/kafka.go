@@ -35,7 +35,7 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 	return nil
 }
 
-func NewKafka(k KafkaInstanceDTO) KafkaRepository {
+func NewKafka(k InstanceDTO) Repository {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_1_0_0
 	config.Producer.Return.Successes = true

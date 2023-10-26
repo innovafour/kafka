@@ -2,7 +2,7 @@ package kafka
 
 import "github.com/IBM/sarama"
 
-type KafkaRepository interface {
+type Repository interface {
 	Produce(topic string, message string) error
 	Consume()
 }
@@ -13,7 +13,7 @@ type kafkaMessageRepository struct {
 	topics      []string
 	messageChan chan TopicDTO
 }
-type KafkaInstanceDTO struct {
+type InstanceDTO struct {
 	Brokers     []string
 	GroupID     string
 	Topics      []string
