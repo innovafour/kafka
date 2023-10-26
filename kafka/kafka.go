@@ -12,14 +12,14 @@ func (cgh *consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error   { 
 func (cgh *consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		var body KafkaBody
+		var body Body
 		err := json.Unmarshal(msg.Value, &body)
 		if err != nil {
 			logger.Error("Failed unmarshalling kafka message ", msg.Value)
 			continue
 		}
 
-		kafkaTopic := KafkaTopicDTO{
+		kafkaTopic := TopicDTO{
 			Topic: msg.Topic,
 			Body:  body,
 		}

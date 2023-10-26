@@ -1,26 +1,23 @@
 package kafka
 
-type KafkaBody struct {
-	Action  string                 `json:"action,omitempty"`
-	Country string                 `json:"country,omitempty"`
-	Data    map[string]interface{} `json:"data,omitempty"`
-	Body    map[string]interface{} `json:"body,omitempty"`
+type TopicDTO struct {
+	Topic string `json:"topic"`
+	Body  Body   `json:"body"`
 }
 
-type KafkaTopicDTO struct {
-	Topic string    `json:"topic"`
-	Body  KafkaBody `json:"body"`
-}
-
-func (b *KafkaTopicDTO) GetData() map[string]interface{} {
+func (b *TopicDTO) GetData() map[string]interface{} {
 	if b.Body.Body != nil {
-		return b.Body.Body
+		return map[string]interface{}{
+			"body": b.Body.Body,
+		}
 	} else {
-		return b.Body.Data
+		return map[string]interface{}{
+			"data": b.Body.Data,
+		}
 	}
 }
 
-func (b *KafkaTopicDTO) Uuid() string {
+func (b *TopicDTO) Uuid() string {
 	uuid, ok := b.Body.Data["uuid"].(string)
 	if !ok {
 		uuid, ok = b.Body.Body["uuid"].(string)
@@ -31,4 +28,11 @@ func (b *KafkaTopicDTO) Uuid() string {
 	}
 
 	return uuid
+}
+
+type Body struct {
+	Action  string                 `json:"action,omitempty"`
+	Country string                 `json:"country,omitempty"`
+	Data    map[string]interface{} `json:"data,omitempty"`
+	Body    map[string]interface{} `json:"body,omitempty"`
 }
