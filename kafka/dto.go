@@ -17,6 +17,14 @@ func (b *TopicDTO) GetData() map[string]interface{} {
 	}
 }
 
+func (b *TopicDTO) GetDataValue() map[string]interface{} {
+	if b.Body.Body != nil {
+		return b.Body.Body
+	} else {
+		return b.Body.Data
+	}
+}
+
 func (b *TopicDTO) Uuid() string {
 	uuid, ok := b.Body.Data["uuid"].(string)
 	if !ok {
