@@ -17,38 +17,43 @@ func (cgh *consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error   { 
 func (cgh *consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		var body Body
-		err := json.Unmarshal(msg.Value, &body)
-		if err != nil {
-			logger.Error("Failed unmarshalling kafka message ", string(msg.Value))
-			continue
-		}
-
-		kafkaTopic := TopicDTO{
-			Topic: msg.Topic,
-			Body:  body,
-		}
-
-		readChan := make(chan bool, 1)
-
-		messageDTO := MessageDTO{
-			TopicDTO: kafkaTopic,
-			ReadChan: readChan,
-		}
-
-		select {
-		case cgh.messageChan <- messageDTO:
-			read := <-readChan
-			if !read {
-				logger.Error("Failed to read message for some reason")
-				continue
-			}
-			sess.MarkMessage(msg, "")
-		case <-time.After(20 * time.Second):
-			logger.Error("Failed to send message to channel: timeout occurred")
-		}
+		go cgh.onMessage(msg, sess)
 	}
+
 	return nil
+}
+
+func (cgh *consumerGroupHandler) onMessage(msg *sarama.ConsumerMessage, sess sarama.ConsumerGroupSession) {
+	var body Body
+	err := json.Unmarshal(msg.Value, &body)
+	if err != nil {
+		logger.Error("Failed unmarshalling kafka message ", string(msg.Value))
+		return
+	}
+
+	kafkaTopic := TopicDTO{
+		Topic: msg.Topic,
+		Body:  body,
+	}
+
+	readChan := make(chan bool, 1)
+
+	messageDTO := MessageDTO{
+		TopicDTO: kafkaTopic,
+		ReadChan: readChan,
+	}
+
+	select {
+	case cgh.messageChan <- messageDTO:
+		read := <-readChan
+		if !read {
+			logger.Error("Failed to read message for some reason")
+			return
+		}
+		sess.MarkMessage(msg, "")
+	case <-time.After(20 * time.Second):
+		logger.Error("Failed to send message to channel: timeout occurred")
+	}
 }
 
 func NewKafka(k InstanceDTO) (Repository, error) {
