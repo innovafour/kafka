@@ -3,6 +3,11 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"bitbucket.org/Soytul/library-go-logger/logger"
 	"github.com/IBM/sarama"
@@ -15,7 +20,7 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 		var body Body
 		err := json.Unmarshal(msg.Value, &body)
 		if err != nil {
-			logger.Error("Failed unmarshalling kafka message ", msg.Value)
+			logger.Error("Failed unmarshalling kafka message ", string(msg.Value))
 			continue
 		}
 
@@ -24,43 +29,145 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 			Body:  body,
 		}
 
-		select {
-		case cgh.messageChan <- kafkaTopic:
-		default:
-			logger.Error("Failed to send message to channel: channel is full")
+		readChan := make(chan bool, 1)
+
+		messageDTO := MessageDTO{
+			TopicDTO: kafkaTopic,
+			readChan: readChan,
 		}
 
-		sess.MarkMessage(msg, "")
+		select {
+		case cgh.messageChan <- messageDTO:
+			read := <-readChan
+			if !read {
+				logger.Error("Failed to read message for some reason")
+				continue
+			}
+			sess.MarkMessage(msg, "")
+		case <-time.After(5 * time.Second):
+			logger.Error("Failed to send message to channel: timeout occurred")
+		}
 	}
 	return nil
 }
 
-func NewKafka(k InstanceDTO) Repository {
+func NewKafka(k InstanceDTO) (Repository, error) {
+	client := &kafkaMessageRepository{
+		topics:      k.Topics,
+		messageChan: k.MessageChan,
+	}
+
+	var err error
+	client.consumer, err = newKafkaConsumer(k)
+	if err != nil {
+		return nil, err
+	}
+
+	client.producer, err = newKafkaProducer(k)
+	if err != nil {
+		if closeErr := client.consumer.Close(); closeErr != nil {
+			logger.Error("Failed to close consumer after producer init failed: ", closeErr)
+		}
+		return nil, err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go handleSignals(client, cancel)
+
+	if !k.AvoidStartConsume {
+		go client.Consume(ctx)
+	}
+
+	return client, nil
+}
+
+func newKafkaConsumer(k InstanceDTO) (sarama.ConsumerGroup, error) {
+	config := sarama.NewConfig()
+	config.Version = sarama.V2_1_0_0
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Consumer.Return.Errors = true
+
+	c, err := sarama.NewConsumerGroup(k.Brokers, k.GroupID, config)
+	if err != nil {
+		logger.Error("Error creating Kafka consumer: ", err)
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func handleSignals(repo *kafkaMessageRepository, cancelFunc context.CancelFunc) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+
+	<-signals
+
+	cancelFunc()
+
+	logger.Info("Received shutdown signal, initiating graceful shutdown...")
+
+	if err := repo.Close(); err != nil {
+		logger.Error("Failed to close Kafka client: ", err)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	logger.Info("Graceful shutdown completed, exiting now.")
+	os.Exit(0)
+}
+
+func (k *kafkaMessageRepository) Consume(ctx context.Context) {
+	handler := &consumerGroupHandler{
+		messageChan: k.messageChan,
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Consumer context cancelled, terminating consumer loop.")
+			return
+		default:
+			if err := k.consumer.Consume(ctx, k.topics, handler); err != nil {
+				logger.Error("Error consuming: ", err)
+				return
+			}
+		}
+	}
+}
+
+func (k *kafkaMessageRepository) Close() error {
+	if err := k.consumer.Close(); err != nil {
+		logger.Error("Failed to close consumer: ", err)
+		return err
+	}
+
+	if k.producer != nil {
+		if err := k.producer.Close(); err != nil {
+			logger.Error("Failed to close producer: ", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func newKafkaProducer(k InstanceDTO) (sarama.AsyncProducer, error) {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_1_0_0
 	config.Producer.Return.Successes = true
 
-	p, err := sarama.NewAsyncProducer(k.Brokers, config)
+	producer, err := sarama.NewAsyncProducer(k.Brokers, config)
 	if err != nil {
-		logger.Fatal("Error creating Kafka producer: %v", err)
-		return nil
+		logger.Error("Failed to start Sarama producer:", err)
+		return nil, err
 	}
 
-	c, err := sarama.NewConsumerGroup(k.Brokers, k.GroupID, config)
-	if err != nil {
-		logger.Fatal("Error creating Kafka consumer: %v ", err)
-		return nil
-	}
-
-	return &kafkaMessageRepository{
-		producer:    p,
-		consumer:    c,
-		topics:      k.Topics,
-		messageChan: k.MessageChan,
-	}
+	return producer, nil
 }
 
 func (k *kafkaMessageRepository) Produce(topic string, message string) error {
+	if k.producer == nil {
+		return errors.New("producer not initialized")
+	}
+
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.StringEncoder(message),
@@ -69,31 +176,11 @@ func (k *kafkaMessageRepository) Produce(topic string, message string) error {
 	k.producer.Input() <- msg
 
 	select {
-	case success := <-k.producer.Successes():
-		logger.Debug("Message sent successfully to topic ", success.Topic)
+	case <-k.producer.Successes():
+		logger.Info("Successfully produced message to topic ", topic)
+		return nil
 	case err := <-k.producer.Errors():
-		logger.Error("Error producing message: %v ", err.Err)
+		logger.Error("Failed to produce message to topic ", topic, ": ", err)
 		return err.Err
-	}
-
-	return nil
-}
-
-func (k *kafkaMessageRepository) Consume() {
-	if len(k.topics) == 0 {
-		logger.Error("No topics to consume from, terminating consumer routine.")
-		return
-	}
-
-	handler := &consumerGroupHandler{
-		messageChan: k.messageChan,
-	}
-
-	for {
-		logger.Debug("Subscribing to topics: ", k.topics)
-		err := k.consumer.Consume(context.TODO(), k.topics, handler)
-		if err != nil {
-			logger.Error("Error consuming: %v", err)
-		}
 	}
 }
