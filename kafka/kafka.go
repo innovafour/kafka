@@ -33,7 +33,7 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 
 		messageDTO := MessageDTO{
 			TopicDTO: kafkaTopic,
-			readChan: readChan,
+			ReadChan: readChan,
 		}
 
 		select {

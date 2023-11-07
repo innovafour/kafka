@@ -27,7 +27,7 @@ type InstanceDTO struct {
 
 type MessageDTO struct {
 	TopicDTO
-	readChan chan bool
+	ReadChan chan bool
 }
 
 type consumerGroupHandler struct {
