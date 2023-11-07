@@ -44,7 +44,7 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 				continue
 			}
 			sess.MarkMessage(msg, "")
-		case <-time.After(5 * time.Second):
+		case <-time.After(20 * time.Second):
 			logger.Error("Failed to send message to channel: timeout occurred")
 		}
 	}
