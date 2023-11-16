@@ -1,0 +1,24 @@
+package main
+
+import (
+	"bitbucket.org/Soytul/library-go-kafka/kafka"
+	"bitbucket.org/Soytul/library-go-logger/logger"
+)
+
+func main() {
+	kafkaInstanceDTO := kafka.InstanceDTO{
+		Brokers: []string{"localhost:9092"},
+		GroupID: "test-group",
+		Topics:  []string{},
+		OnMessageReceived: func(message kafka.TopicDTO) bool {
+			return true
+		},
+	}
+
+	kafkaRepo, err := kafka.NewKafka(kafkaInstanceDTO)
+	if err != nil {
+		logger.Critical("Failed to create kafka instance")
+	}
+
+	kafkaRepo.Produce("test-topic", "test-value")
+}

@@ -24,7 +24,7 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 }
 
 func (cgh *consumerGroupHandler) onMessage(msg *sarama.ConsumerMessage, sess sarama.ConsumerGroupSession) {
-	var body Body
+	var body interface{}
 	err := json.Unmarshal(msg.Value, &body)
 	if err != nil {
 		logger.Error("Failed unmarshalling kafka message ", string(msg.Value))

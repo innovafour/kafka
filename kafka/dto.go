@@ -1,34 +1,75 @@
 package kafka
 
+import (
+	"encoding/json"
+)
+
 type TopicDTO struct {
 	Topic string `json:"topic"`
-	Body  Body   `json:"body"`
+	Body  interface{}
+}
+
+func (b *TopicDTO) BodyAsMap() map[string]interface{} {
+	bodyBytes, err := json.Marshal(b.Body)
+	if err != nil {
+		return nil
+	}
+
+	bodyAsMap := make(map[string]interface{})
+	err = json.Unmarshal(bodyBytes, &bodyAsMap)
+
+	if err != nil {
+		return nil
+	}
+
+	return bodyAsMap
+}
+
+func (b *TopicDTO) tulBody() *TulBody {
+	bodyBytes, err := json.Marshal(b.Body)
+	if err != nil {
+		return nil
+	}
+
+	tulBody := &TulBody{}
+	err = json.Unmarshal(bodyBytes, tulBody)
+	if err != nil {
+		return nil
+	}
+
+	return tulBody
 }
 
 func (b *TopicDTO) GetData() map[string]interface{} {
-	if b.Body.Body != nil {
+	tulBody := b.tulBody()
+
+	if tulBody.Body != nil {
 		return map[string]interface{}{
-			"body": b.Body.Body,
+			"body": tulBody.Body,
 		}
 	} else {
 		return map[string]interface{}{
-			"data": b.Body.Data,
+			"data": tulBody.Data,
 		}
 	}
 }
 
 func (b *TopicDTO) GetDataValue() map[string]interface{} {
-	if b.Body.Body != nil {
-		return b.Body.Body
+	tulBody := b.tulBody()
+
+	if tulBody.Body != nil {
+		return tulBody.Body
 	} else {
-		return b.Body.Data
+		return tulBody.Data
 	}
 }
 
 func (b *TopicDTO) Uuid() string {
-	uuid, ok := b.Body.Data["uuid"].(string)
+	tulBody := b.tulBody()
+
+	uuid, ok := tulBody.Data["uuid"].(string)
 	if !ok {
-		uuid, ok = b.Body.Body["uuid"].(string)
+		uuid, ok = tulBody.Body["uuid"].(string)
 
 		if !ok {
 			return ""
@@ -38,7 +79,7 @@ func (b *TopicDTO) Uuid() string {
 	return uuid
 }
 
-type Body struct {
+type TulBody struct {
 	Action  string                 `json:"action,omitempty"`
 	Country string                 `json:"country,omitempty"`
 	Data    map[string]interface{} `json:"data,omitempty"`
