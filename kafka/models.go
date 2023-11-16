@@ -15,7 +15,7 @@ type kafkaMessageRepository struct {
 	producer          sarama.AsyncProducer
 	consumer          sarama.ConsumerGroup
 	topics            []string
-	OnMessageReceived func(message TopicDTO) bool
+	OnMessageReceived func(message TopicDTO) (readedSuccessfully bool)
 }
 
 type InstanceDTO struct {
@@ -23,9 +23,9 @@ type InstanceDTO struct {
 	GroupID           string
 	Topics            []string
 	AvoidStartConsume bool
-	OnMessageReceived func(message TopicDTO) bool
+	OnMessageReceived func(message TopicDTO) (readedSuccessfully bool)
 }
 
 type consumerGroupHandler struct {
-	OnMessageReceived func(message TopicDTO) bool
+	OnMessageReceived func(message TopicDTO) (readedSuccessfully bool)
 }
