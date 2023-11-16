@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+
 	"github.com/IBM/sarama"
 )
 
@@ -11,25 +12,20 @@ type Repository interface {
 }
 
 type kafkaMessageRepository struct {
-	producer    sarama.AsyncProducer
-	consumer    sarama.ConsumerGroup
-	topics      []string
-	messageChan chan MessageDTO
+	producer          sarama.AsyncProducer
+	consumer          sarama.ConsumerGroup
+	topics            []string
+	OnMessageReceived func(message TopicDTO) bool
 }
 
 type InstanceDTO struct {
 	Brokers           []string
 	GroupID           string
 	Topics            []string
-	MessageChan       chan MessageDTO
 	AvoidStartConsume bool
-}
-
-type MessageDTO struct {
-	TopicDTO
-	ReadChan chan bool
+	OnMessageReceived func(message TopicDTO) bool
 }
 
 type consumerGroupHandler struct {
-	messageChan chan MessageDTO
+	OnMessageReceived func(message TopicDTO) bool
 }

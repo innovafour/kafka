@@ -36,30 +36,20 @@ func (cgh *consumerGroupHandler) onMessage(msg *sarama.ConsumerMessage, sess sar
 		Body:  body,
 	}
 
-	readChan := make(chan bool, 1)
+	read := cgh.OnMessageReceived(kafkaTopic)
 
-	messageDTO := MessageDTO{
-		TopicDTO: kafkaTopic,
-		ReadChan: readChan,
+	if !read {
+		logger.Error("Failed to read message for some reason")
+		return
 	}
 
-	select {
-	case cgh.messageChan <- messageDTO:
-		read := <-readChan
-		if !read {
-			logger.Error("Failed to read message for some reason")
-			return
-		}
-		sess.MarkMessage(msg, "")
-	case <-time.After(20 * time.Second):
-		logger.Error("Failed to send message to channel: timeout occurred")
-	}
+	sess.MarkMessage(msg, "")
 }
 
 func NewKafka(k InstanceDTO) (Repository, error) {
 	client := &kafkaMessageRepository{
-		topics:      k.Topics,
-		messageChan: k.MessageChan,
+		topics:            k.Topics,
+		OnMessageReceived: k.OnMessageReceived,
 	}
 
 	var err error
@@ -123,8 +113,9 @@ func handleSignals(repo *kafkaMessageRepository, cancelFunc context.CancelFunc) 
 
 func (k *kafkaMessageRepository) Consume(ctx context.Context) {
 	handler := &consumerGroupHandler{
-		messageChan: k.messageChan,
+		OnMessageReceived: k.OnMessageReceived,
 	}
+
 	for {
 		select {
 		case <-ctx.Done():
