@@ -95,14 +95,7 @@ func (b *TopicDTO) Country() string {
 		return country
 	}
 
-	country, ok = tulBody.Data["country"].(string)
-	if !ok {
-		country, ok = tulBody.Body["country"].(string)
-
-		if !ok {
-			return ""
-		}
-	}
+	country = GetKeyFromHeaders(b.HeadersAsMapStringString(), "x-country")
 
 	return country
 }
