@@ -5,18 +5,23 @@ import (
 )
 
 type TopicDTO struct {
-	Topic string `json:"topic"`
-	Body  interface{}
+	Topic   string    `json:"topic"`
+	Headers []Headers `json:"headers"`
+	Body    []byte    `json:"body"`
+}
+
+func (b *TopicDTO) HeadersAsMapStringString() map[string]string {
+	headersAsMap := make(map[string]string)
+	for _, header := range b.Headers {
+		headersAsMap[string(header.Key)] = string(header.Value)
+	}
+
+	return headersAsMap
 }
 
 func (b *TopicDTO) BodyAsMap() map[string]interface{} {
-	bodyBytes, err := json.Marshal(b.Body)
-	if err != nil {
-		return nil
-	}
-
 	bodyAsMap := make(map[string]interface{})
-	err = json.Unmarshal(bodyBytes, &bodyAsMap)
+	err := json.Unmarshal(b.Body, &bodyAsMap)
 
 	if err != nil {
 		return nil
@@ -26,13 +31,8 @@ func (b *TopicDTO) BodyAsMap() map[string]interface{} {
 }
 
 func (b *TopicDTO) tulBody() *TulBody {
-	bodyBytes, err := json.Marshal(b.Body)
-	if err != nil {
-		return nil
-	}
-
 	tulBody := &TulBody{}
-	err = json.Unmarshal(bodyBytes, tulBody)
+	err := json.Unmarshal(b.Body, tulBody)
 	if err != nil {
 		return nil
 	}
@@ -77,6 +77,34 @@ func (b *TopicDTO) Uuid() string {
 	}
 
 	return uuid
+}
+
+func (b *TopicDTO) Country() string {
+	tulBody := b.tulBody()
+
+	country, ok := tulBody.Data["country"].(string)
+	if !ok {
+		country, ok = tulBody.Body["country"].(string)
+
+		if !ok {
+			return ""
+		}
+	}
+
+	if country != "" {
+		return country
+	}
+
+	country, ok = tulBody.Data["country"].(string)
+	if !ok {
+		country, ok = tulBody.Body["country"].(string)
+
+		if !ok {
+			return ""
+		}
+	}
+
+	return country
 }
 
 type TulBody struct {

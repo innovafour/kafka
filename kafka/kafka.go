@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"os/signal"
@@ -24,16 +23,19 @@ func (cgh *consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, 
 }
 
 func (cgh *consumerGroupHandler) onMessage(msg *sarama.ConsumerMessage, sess sarama.ConsumerGroupSession) {
-	var body interface{}
-	err := json.Unmarshal(msg.Value, &body)
-	if err != nil {
-		logger.Error("Failed unmarshalling kafka message ", string(msg.Value))
-		return
+	headers := make([]Headers, 0, len(msg.Headers))
+
+	for _, header := range msg.Headers {
+		headers = append(headers, Headers{
+			Key:   header.Key,
+			Value: header.Value,
+		})
 	}
 
 	kafkaTopic := TopicDTO{
-		Topic: msg.Topic,
-		Body:  body,
+		Topic:   msg.Topic,
+		Headers: headers,
+		Body:    msg.Value,
 	}
 
 	read := cgh.OnMessageReceived(kafkaTopic)

@@ -6,6 +6,11 @@ import (
 	"github.com/IBM/sarama"
 )
 
+type Headers struct {
+	Key   []byte `json:"key"`
+	Value []byte `json:"value"`
+}
+
 type Repository interface {
 	Produce(topic string, message string) error
 	Consume(ctx context.Context)
