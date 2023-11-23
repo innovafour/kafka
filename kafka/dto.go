@@ -30,11 +30,11 @@ func (b *TopicDTO) BodyAsMap() map[string]interface{} {
 	return bodyAsMap
 }
 
-func (b *TopicDTO) tulBody() *TulBody {
-	tulBody := &TulBody{}
-	err := json.Unmarshal(b.Body, tulBody)
+func (b *TopicDTO) tulBody() TulBody {
+	tulBody := TulBody{}
+	err := json.Unmarshal(b.Body, &tulBody)
 	if err != nil {
-		return nil
+		return TulBody{}
 	}
 
 	return tulBody
