@@ -85,9 +85,8 @@ func (b *TopicDTO) Country() string {
 	country, ok := tulBody.Data["country"].(string)
 	if !ok {
 		country, ok = tulBody.Body["country"].(string)
-
 		if !ok {
-			return ""
+			country = ""
 		}
 	}
 
