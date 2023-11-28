@@ -161,7 +161,7 @@ func newKafkaProducer(k InstanceDTO) (sarama.AsyncProducer, error) {
 	return producer, nil
 }
 
-func (k *kafkaMessageRepository) Produce(topic string, message string, headers ...map[string]string) error {
+func (k *kafkaMessageRepository) Produce(topic string, message []byte, headers ...map[string]string) error {
 	if k.producer == nil {
 		return errors.New("producer not initialized")
 	}
@@ -179,7 +179,7 @@ func (k *kafkaMessageRepository) Produce(topic string, message string, headers .
 
 	msg := &sarama.ProducerMessage{
 		Topic:   topic,
-		Value:   sarama.StringEncoder(message),
+		Value:   sarama.ByteEncoder(message),
 		Headers: h,
 	}
 

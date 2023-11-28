@@ -12,7 +12,7 @@ type Headers struct {
 }
 
 type Repository interface {
-	Produce(topic string, message string, headers ...map[string]string) error
+	Produce(topic string, message []byte, headers ...map[string]string) error
 	Consume(ctx context.Context)
 }
 

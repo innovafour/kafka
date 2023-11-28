@@ -20,5 +20,5 @@ func main() {
 		logger.Critical("Failed to create kafka instance")
 	}
 
-	kafkaRepo.Produce("test-topic", "test-value")
+	kafkaRepo.Produce("test-topic", []byte("test-value"))
 }
