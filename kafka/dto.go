@@ -82,14 +82,7 @@ func (b *TopicDTO) Uuid() string {
 func (b *TopicDTO) Country() string {
 	tulBody := b.tulBody()
 
-	country, ok := tulBody.Data["country"].(string)
-	if !ok {
-		country, ok = tulBody.Body["country"].(string)
-		if !ok {
-			country = ""
-		}
-	}
-
+	country := tulBody.Country
 	if country != "" {
 		return country
 	}
