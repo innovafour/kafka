@@ -48,7 +48,7 @@ func (cgh *consumerGroupHandler) onMessage(msg *sarama.ConsumerMessage, sess sar
 	sess.MarkMessage(msg, "")
 }
 
-func NewKafka(k InstanceDTO) (Repository, error) {
+func NewKafka(k InstanceDTO) (Repository, context.Context, error) {
 	client := &kafkaMessageRepository{
 		topics:            k.Topics,
 		OnMessageReceived: k.OnMessageReceived,
@@ -57,7 +57,7 @@ func NewKafka(k InstanceDTO) (Repository, error) {
 	var err error
 	client.consumer, err = newKafkaConsumer(k)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	client.producer, err = newKafkaProducer(k)
@@ -65,7 +65,7 @@ func NewKafka(k InstanceDTO) (Repository, error) {
 		if closeErr := client.consumer.Close(); closeErr != nil {
 			logger.Error("Failed to close consumer after producer init failed: ", closeErr)
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -75,7 +75,7 @@ func NewKafka(k InstanceDTO) (Repository, error) {
 		go client.Consume(ctx)
 	}
 
-	return client, nil
+	return client, ctx, nil
 }
 
 func newKafkaConsumer(k InstanceDTO) (sarama.ConsumerGroup, error) {

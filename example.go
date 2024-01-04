@@ -15,7 +15,7 @@ func main() {
 		},
 	}
 
-	kafkaRepo, err := kafka.NewKafka(kafkaInstanceDTO)
+	kafkaRepo, _, err := kafka.NewKafka(kafkaInstanceDTO)
 	if err != nil {
 		logger.Critical("Failed to create kafka instance")
 	}
