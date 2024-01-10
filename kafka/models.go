@@ -28,6 +28,7 @@ type InstanceDTO struct {
 	GroupID           string
 	Topics            []string
 	AvoidStartConsume bool
+	MaxMessageBytes   int
 	OnMessageReceived func(message TopicDTO) (readedSuccessfully bool)
 }
 

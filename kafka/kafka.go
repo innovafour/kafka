@@ -152,6 +152,10 @@ func newKafkaProducer(k InstanceDTO) (sarama.AsyncProducer, error) {
 	config.Version = sarama.V2_1_0_0
 	config.Producer.Return.Successes = true
 
+	if k.MaxMessageBytes > 0 {
+		config.Producer.MaxMessageBytes = k.MaxMessageBytes
+	}
+
 	producer, err := sarama.NewAsyncProducer(k.Brokers, config)
 	if err != nil {
 		logger.Error("Failed to start Sarama producer:", err)
