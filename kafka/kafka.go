@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"bitbucket.org/Soytul/library-go-logger/logger"
 	"github.com/IBM/sarama"
@@ -101,13 +100,10 @@ func handleSignals(repo *kafkaMessageRepository, cancelFunc context.CancelFunc) 
 
 	cancelFunc()
 
-	logger.Info("Received shutdown signal, initiating graceful shutdown...")
-
-	if err := repo.Close(); err != nil {
+	err := repo.Close()
+	if err != nil {
 		logger.Error("Failed to close Kafka client: ", err)
 	}
-
-	time.Sleep(2 * time.Second)
 
 	logger.Info("Graceful shutdown completed, exiting now.")
 	os.Exit(0)
