@@ -215,9 +215,9 @@ func (k *kafkaMessageRepository) handleSignals(cancelFunc context.CancelFunc) {
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	<-signals
-	logger.Info("Signal received, shutting down gracefully...")
 	cancelFunc()
 	k.Close()
+	os.Exit(0)
 }
 
 func (k *kafkaMessageRepository) Close() error {
@@ -232,7 +232,6 @@ func (k *kafkaMessageRepository) Close() error {
 		}
 
 		close(k.produceBuffer)
-		k.wg.Wait()
 
 		if k.producer != nil {
 			if e := k.producer.Close(); e != nil {
