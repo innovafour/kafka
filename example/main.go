@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bitbucket.org/Soytul/library-go-kafka/kafka"
-	"bitbucket.org/Soytul/library-go-logger/logger"
+	"github.com/innovafour/kafka"
+	"github.com/innovafour/logger"
 )
 
 func main() {

@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"sync"
 
 	"github.com/IBM/sarama"
 )
@@ -20,7 +21,11 @@ type kafkaMessageRepository struct {
 	producer          sarama.AsyncProducer
 	consumer          sarama.ConsumerGroup
 	topics            []string
-	OnMessageReceived func(message TopicDTO) (readedSuccessfully bool)
+	OnMessageReceived func(msg TopicDTO) bool
+
+	produceBuffer chan *sarama.ProducerMessage
+	wg            sync.WaitGroup
+	closeOnce     sync.Once
 }
 
 type InstanceDTO struct {
@@ -33,5 +38,8 @@ type InstanceDTO struct {
 }
 
 type consumerGroupHandler struct {
-	OnMessageReceived func(message TopicDTO) (readedSuccessfully bool)
+	OnMessageReceived func(msg TopicDTO) bool
+	workerPool        chan struct{}
+	msgChan           chan *sarama.ConsumerMessage
+	wg                *sync.WaitGroup
 }
