@@ -60,6 +60,7 @@ func newKafkaProducer(k InstanceDTO) (sarama.AsyncProducer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return producer, nil
 }
 
@@ -100,8 +101,13 @@ func (k *kafkaMessageRepository) startProducerWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case msg := <-k.produceBuffer:
+		case msg, ok := <-k.produceBuffer:
+			if !ok {
+				return
+			}
+
 			k.producer.Input() <- msg
+
 			select {
 			case <-k.producer.Successes():
 			case err := <-k.producer.Errors():
@@ -119,8 +125,8 @@ func newKafkaConsumer(k InstanceDTO) (sarama.ConsumerGroup, error) {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRange()
 	config.Consumer.Return.Errors = true
-	config.Consumer.Group.Session.Timeout = 30 * time.Second
-	config.Consumer.Group.Heartbeat.Interval = 10 * time.Second
+	config.Consumer.Group.Session.Timeout = 60 * time.Second
+	config.Consumer.Group.Heartbeat.Interval = 15 * time.Second
 
 	consumer, err := sarama.NewConsumerGroup(k.Brokers, k.GroupID, config)
 	if err != nil {
@@ -140,15 +146,36 @@ func (k *kafkaMessageRepository) Consume(ctx context.Context) {
 
 	go handler.startWorkers()
 
-	for {
-		if err := k.consumer.Consume(ctx, k.topics, handler); err != nil {
-			logger.Error("Error consuming: ", err)
-			time.Sleep(1 * time.Second)
-		}
+	backoff := 1 * time.Second
+	maxBackoff := 30 * time.Second
 
+	for {
 		if ctx.Err() != nil {
 			break
 		}
+
+		err := k.consumer.Consume(ctx, k.topics, handler)
+		if err != nil {
+			logger.Error("Error consuming: ", err)
+
+			if errors.Is(err, sarama.ErrNotCoordinatorForConsumer) ||
+				errors.Is(err, sarama.ErrConsumerCoordinatorNotAvailable) {
+
+				logger.Info("Coordinator not available, retrying after backoff: ", backoff)
+				time.Sleep(backoff)
+				backoff *= 2
+				if backoff > maxBackoff {
+					backoff = maxBackoff
+				}
+				continue
+			}
+
+			time.Sleep(2 * time.Second)
+			backoff = 1 * time.Second
+			continue
+		}
+
+		backoff = 1 * time.Second
 	}
 }
 
